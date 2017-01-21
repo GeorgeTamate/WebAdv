@@ -4,7 +4,7 @@
 var express = require('express')
 var app = express()
 
-app.get('/', function (req, res) {
+app.get('*', function (req, res) {
   res.send('Hello World!');
   var jo = JSON.stringify(req.headers);
   console.log();

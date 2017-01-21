@@ -15,14 +15,14 @@ app.use (function(req, res, next) {
     });
 });
 
-app.get('/', function (req, res) {
+app.get('*', function (req, res) {
   res.send('Hello GET!');
   console.log(req.rawHeaders);
   console.log();
   console.log(req.body);
 })
 
-app.post('/', function (req, res) {
+app.post('*', function (req, res) {
   res.send('Hello POST!');
   console.log(req.rawHeaders);
   console.log();
