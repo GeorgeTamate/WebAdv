@@ -1,0 +1,21 @@
+{
+  "name": "assig2",
+  "version": "1.0.0",
+  "description": "parsing http requests",
+  "main": "index.js",
+  "scripts": {
+    "test": "geo"
+  },
+  "repository": {
+    "type": "git",
+    "url": "wa"
+  },
+  "keywords": [
+    "wa"
+  ],
+  "author": "georgetamate",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.14.0"
+  }
+}
