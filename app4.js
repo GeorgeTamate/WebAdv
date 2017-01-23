@@ -37,12 +37,10 @@ app.get('/login', function (req, res) {
 })
 
 app.get('*', function (req, res) {
-    
-
     var portNumber = req.get('host');
     portNumber = portNumber.split(':')[1];
 
-    var myjson = {
+    var jsonHeader = {
         "httpMethod": req.method,
         "path": req.path,
         "port": portNumber,
@@ -50,12 +48,12 @@ app.get('*', function (req, res) {
     }
 
     res.statusCode = 200;
-    res.send(myjson);
+    res.send(jsonHeader);
 })
 
 app.post('/login', function (req, res) {
     res.statusCode = 200;
-    res.send('Password Cual es.');
+    res.send('');
 })
 
 app.post('*', function (req, res) {
