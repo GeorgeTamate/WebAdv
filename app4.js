@@ -72,17 +72,18 @@ app.get('*', function (req, res) {
     var headerFields = [];
     var headerFieldsJson = JSON.parse(JSON.stringify(req.headers));
 
-    portNumber = portNumber.split(':')[1];
+    portNumber = portNumber.split(':');
 
     for (var i in headerFieldsJson) {
         headerFields.push(headerFieldsJson[i]);
     }
 
     var responseJson = {
-        "httpMethod": req.method,
+        "method": req.method,
         "path": req.path,
-        "port": portNumber,
-        "headerFields": headerFields
+        "port": portNumber[1],
+        "host": portNumber[0],
+        "header": headerFields
     };
 
     res.statusCode = 200;
