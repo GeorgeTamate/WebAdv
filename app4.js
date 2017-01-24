@@ -5,6 +5,10 @@
 var express = require('express');
 var app = express();
 var path = require('path');
+var bodyParser = require('body-parser');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/404', function (req, res) {
     res.statusCode = 404;
@@ -45,15 +49,21 @@ app.get('*', function (req, res) {
         "path": req.path,
         "port": portNumber,
         "headerFields": req.headers
-    }
+    };
 
     res.statusCode = 200;
     res.send(jsonHeader);
 })
 
 app.post('/login', function (req, res) {
+    var jsonObject = {
+        "username": req.body.username,
+        "password": req.body.password
+    };
+
+    res.type('application/json');
     res.statusCode = 200;
-    res.send('');
+    res.send(jsonObject);
 })
 
 app.post('*', function (req, res) {
