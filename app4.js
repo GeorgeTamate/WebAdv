@@ -7,8 +7,12 @@ var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
 
+var allowedMethods = ['GET', 'POST', 'PUT'];
+
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
 
 app.get('/404', function (req, res) {
     res.statusCode = 404;
@@ -28,31 +32,10 @@ app.get('/error', function (req, res) {
     res.send('error');
 })
 
-app.get('/nonimplemented', function (req, res) {
-    res.statusCode = 501;
-    console.log('nonimplemented');
-    res.send('nonimplemented');
-})
-
 app.get('/login', function (req, res) {
     res.statusCode = 200;
     console.log('login');
     res.sendFile(path.join(__dirname + '/Resources/login.html'));
-})
-
-app.get('*', function (req, res) {
-    var portNumber = req.get('host');
-    portNumber = portNumber.split(':')[1];
-
-    var jsonHeader = {
-        "httpMethod": req.method,
-        "path": req.path,
-        "port": portNumber,
-        "headerFields": req.headers
-    };
-
-    res.statusCode = 200;
-    res.send(jsonHeader);
 })
 
 app.post('/login', function (req, res) {
@@ -66,12 +49,52 @@ app.post('/login', function (req, res) {
     res.send(jsonObject);
 })
 
+app.all('/notimplemented', function (req, res) {
+    switch (req.method) {
+        case 'GET':
+        case 'POST':
+        case 'PUT':
+            res.statusCode = 200;
+            break;
+        default:
+            res.statusCode = 501;
+            break;
+    }
+
+    res.set('Allow', allowedMethods);
+    console.log('notimplemented');
+    res.send('notimplemented');
+})
+
+// DEFAULT
+app.get('*', function (req, res) {
+    var portNumber = req.get('host');
+    var headerFields = [];
+    var headerFieldsJson = JSON.parse(JSON.stringify(req.headers));
+
+    portNumber = portNumber.split(':')[1];
+
+    for (var i in headerFieldsJson) {
+        headerFields.push(headerFieldsJson[i]);
+    }
+
+    var responseJson = {
+        "httpMethod": req.method,
+        "path": req.path,
+        "port": portNumber,
+        "headerFields": headerFields
+    };
+
+    res.statusCode = 200;
+    res.send(responseJson);
+})
+
 app.post('*', function (req, res) {
     res.statusCode = 200;
     res.send('No resource found for this path.');
 })
 
-
+// LISTEN
 app.listen(8085, function () {
     console.log('Example app listening on port 8085!');
 })
