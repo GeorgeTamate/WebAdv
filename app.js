@@ -7,8 +7,20 @@ var exphbs  = require('express-handlebars');
 var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
+var sqlite3 = require('sqlite3').verbose();
+var db = new sqlite3.Database('db/movies.db');
+var shortid = require('shortid');
+
 var multer  = require('multer');
-var upload = multer({ dest: 'uploads/' });
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, __dirname + '/uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, shortid.generate() + '.' + file.mimetype.split('/')[1]);
+    }
+});
+var upload = multer({ storage: storage });
 
 var allowedMethods = ['GET', 'POST', 'PUT'];
 
@@ -21,9 +33,41 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
+
+// db.serialize(function () {
+//     db.run("CREATE TABLE if not exists user_info (info TEXT)");
+//     var stmt = db.prepare("INSERT INTO user_info VALUES (?)");
+//     for (var i = 0; i < 10; i++) {
+//         stmt.run("Ipsum " + i);
+//     }
+//     stmt.finalize();
+
+//     db.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
+//         console.log(row.id + ": " + row.info);
+//     });
+// });
+
+// db.close();
+
+// //Perform SELECT Operation
+// db.all("SELECT * from blah blah blah where this=" + that, function (err, rows) {
+//     //rows contain values while errors, well you can figure out.
+// });
+
+// //Perform INSERT operation.
+// db.run("INSERT into table_name(col1,col2,col3) VALUES (val1,val2,val3)");
+
+// //Perform DELETE operation
+// db.run("DELETE * from table_name where condition");
+
+// //Perform UPDATE operation
+// db.run("UPDATE table_name where condition");
+
 // Handlebars
 
 app.get('/example', function (req, res) {
+    console.log('Sample Shortid: ' + shortid.generate());
+    //PPBqWA9
     res.render('home');
 });
 
@@ -65,7 +109,8 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
         "error": '',
         "message": ''
     };
-
+    
+    console.log();
     console.log('NAME: ' + name.text);
     console.log('DESCRIPTION: ' + description.text);
     console.log('KEYWORDS: ' + keywords.text);
@@ -104,6 +149,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
     } else {
         console.log('FILENAME: ' + req.file.originalname);
         console.log('FILEMIME: ' + req.file.mimetype);
+        console.log('DESTNAME: ' + req.file.filename);
     }
 
     // Response
@@ -127,9 +173,29 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
     } else {
         res.send('uploaded!');
     }
+
+    // SQLite transaction
+    var sampledb = new sqlite3.Database('db/example.db');
+    sampledb.serialize(function () {
+        sampledb.run("CREATE TABLE if not exists user_info (info TEXT)");
+        var stmt = sampledb.prepare("INSERT INTO user_info VALUES (?)");
+        for (var i = 0; i < 10; i++) {
+            stmt.run("Ipsum " + i);
+        }
+        stmt.finalize();
+
+        sampledb.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
+            console.log(row.id + ": " + row.info);
+        });
+    });
+
+    sampledb.close();
 });
 
-// Assig2,3
+
+
+
+// Assig2,3 //////////////////////////////////////////////////////
 
 app.get('/404', function (req, res) {
     res.statusCode = 404;
