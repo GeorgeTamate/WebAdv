@@ -77,15 +77,24 @@ app.get('/movies', function (req, res) {
     var db = new sqlite3.Database('db/movies.db');
     db.serialize(function () {
         db.all("SELECT * FROM movies", function (err, rows) {
-            res.render('list', { rows: rows });
+            res.render('movies', { rows: rows });
         });
     });
     db.close();
 });
 
 app.get('/movies/json', function (req, res) {
-    console.log();
-    res.render('list');
+    console.log('/movies/json');
+    var db = new sqlite3.Database('db/movies.db');
+    db.serialize(function () {
+        db.all("SELECT * FROM movies", function (err, json) {
+            json.forEach(function(element) {
+                element.keywords = element.keywords.split(',');
+            }, this);
+            res.send(json);
+        });
+    });
+    db.close();
 });
 
 app.get('/movies/list', function (req, res) {
@@ -101,7 +110,16 @@ app.get('/movies/list', function (req, res) {
 
 app.get('/movies/list/json', function (req, res) {
     console.log('/movies/list/json');
-    res.render('list');
+    var db = new sqlite3.Database('db/movies.db');
+    db.serialize(function () {
+        db.all("SELECT * FROM movies", function (err, json) {
+            json.forEach(function(element) {
+                element.keywords = element.keywords.split(',');
+            }, this);
+            res.send(json);
+        });
+    });
+    db.close();
 });
 
 app.get('/movies/details/:id', function (req, res) {
