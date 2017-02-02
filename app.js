@@ -8,7 +8,6 @@ var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
 var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('db/movies.db');
 var shortid = require('shortid');
 
 var multer  = require('multer');
@@ -29,39 +28,41 @@ var allowedMethods = ['GET', 'POST', 'PUT'];
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
 app.set('view engine', 'handlebars');
 
+app.use(express.static(path.join(__dirname, 'generated')));
+app.use(express.static(path.join(__dirname, 'uploads')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-
-// db.serialize(function () {
-//     db.run("CREATE TABLE if not exists user_info (info TEXT)");
-//     var stmt = db.prepare("INSERT INTO user_info VALUES (?)");
+// var sampledb = new sqlite3.Database('db/sample.db');
+// sampledb.serialize(function () {
+//     sampledb.run("CREATE TABLE if not exists user_info (info TEXT)");
+//     var stmt = sampledb.prepare("INSERT INTO user_info VALUES (?)");
 //     for (var i = 0; i < 10; i++) {
 //         stmt.run("Ipsum " + i);
 //     }
 //     stmt.finalize();
 
-//     db.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
+//     sampledb.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
 //         console.log(row.id + ": " + row.info);
 //     });
 // });
 
-// db.close();
+// sampledb.close();
 
 // //Perform SELECT Operation
-// db.all("SELECT * from blah blah blah where this=" + that, function (err, rows) {
+// sampledb.all("SELECT * from blah blah blah where this=" + that, function (err, rows) {
 //     //rows contain values while errors, well you can figure out.
 // });
 
 // //Perform INSERT operation.
-// db.run("INSERT into table_name(col1,col2,col3) VALUES (val1,val2,val3)");
+// sampledb.run("INSERT into table_name(col1,col2,col3) VALUES (val1,val2,val3)");
 
 // //Perform DELETE operation
-// db.run("DELETE * from table_name where condition");
+// sampledb.run("DELETE * from table_name where condition");
 
 // //Perform UPDATE operation
-// db.run("UPDATE table_name where condition");
+// sampledb.run("UPDATE table_name where condition");
 
 // Handlebars
 
@@ -69,6 +70,47 @@ app.get('/example', function (req, res) {
     console.log('Sample Shortid: ' + shortid.generate());
     //PPBqWA9
     res.render('home');
+});
+
+app.get('/movies', function (req, res) {
+    console.log('/movies');
+    var db = new sqlite3.Database('db/movies.db');
+    db.serialize(function () {
+        db.all("SELECT * FROM movies", function (err, rows) {
+            res.render('list', { rows: rows });
+        });
+    });
+    db.close();
+});
+
+app.get('/movies/json', function (req, res) {
+    console.log();
+    res.render('list');
+});
+
+app.get('/movies/list', function (req, res) {
+    console.log('/movies/list');
+    var db = new sqlite3.Database('db/movies.db');
+    db.serialize(function () {
+        db.all("SELECT * FROM movies", function (err, rows) {
+            res.render('list', { rows: rows });
+        });
+    });
+    db.close();
+});
+
+app.get('/movies/list/json', function (req, res) {
+    console.log('/movies/list/json');
+    res.render('list');
+});
+
+app.get('/movies/details/:id', function (req, res) {
+    console.log('/movies/details/' + req.param("id"));
+    var db = new sqlite3.Database('db/movies.db');
+    db.all("SELECT * FROM movies WHERE id=?", req.param("id"), function (err, rows) {
+        res.render('details', { rows: rows });
+    });
+    db.close();
 });
 
 app.get('/movies/create', function (req, res) {
@@ -171,25 +213,18 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
             }
         });
     } else {
+        // SQLite transaction
+        var db = new sqlite3.Database('db/movies.db');
+        db.serialize(function () {
+            db.run("CREATE TABLE if not exists movies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, keywords TEXT, original TEXT, compressed TEXT, thumb1 TEXT, thumb2 TEXT, thumb3 TEXT)");
+            var stmt = db.prepare("INSERT INTO movies (name, description, keywords, original) VALUES (?, ?, ?, ?)");
+            stmt.run(req.body.name, req.body.description, req.body.keywords, req.file.filename);
+            stmt.finalize();
+        });
+        db.close();
         res.send('uploaded!');
     }
 
-    // SQLite transaction
-    var sampledb = new sqlite3.Database('db/example.db');
-    sampledb.serialize(function () {
-        sampledb.run("CREATE TABLE if not exists user_info (info TEXT)");
-        var stmt = sampledb.prepare("INSERT INTO user_info VALUES (?)");
-        for (var i = 0; i < 10; i++) {
-            stmt.run("Ipsum " + i);
-        }
-        stmt.finalize();
-
-        sampledb.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
-            console.log(row.id + ": " + row.info);
-        });
-    });
-
-    sampledb.close();
 });
 
 
