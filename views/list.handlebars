@@ -1,0 +1,57 @@
+<div class="jumbotron text-center">
+    <h1>Movies List</h1>
+    <p>List of movies in the database.</p>
+</div>
+
+<div class="container">
+    <table class="table table-striped">
+        <thead>
+            <th>
+                NAME
+            </th>
+            <th>
+                DESCRIPTION
+            </th>
+            <th>
+                KEYWORDS
+            </th>
+            <th>
+                THUMBNAIL
+            </th>
+        </thead>
+        <tbody>
+            {{#each rows}}
+            <tr>
+                <td class="align-middle">
+                    <a href="/movies/details/{{id}}">
+                    {{name}}
+                    </a>
+                </td>
+                <td class="align-middle">
+                    {{description}}
+                </td>
+                <td class="align-middle">
+                    {{keywords}}
+                </td>
+                {{#if thumb1}}
+                <td class="align-middle">
+                    <div style="max-width: 100px">
+                        <a href="/movies/details/{{id}}">
+                           <img src="../../{{thumb1}}" class="img-thumbnail">
+                        </a>
+                    </div>
+                </td>
+                {{else}}
+                <td class="align-middle">
+                    <div style="max-width: 100px">
+                        <a href="/movies/details/{{id}}">
+                            <img src="../../{{original}}" class="img-thumbnail">
+                        </a>
+                    </div>
+                </td>
+                {{/if}}
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>

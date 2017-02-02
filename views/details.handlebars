@@ -1,0 +1,23 @@
+{{#each rows}}
+<div class="jumbotron text-center">
+    <h1>Details</h1>
+    <p>A more detailed peek into "{{name}}".</p>
+</div>
+
+<div class="container text-center">
+    <h2>{{name}}</h2>
+    <br>
+    {{#if compressed}}
+    <img src="../../{{compressed}}" class="img-thumbnail">
+    {{else}}
+    <img src="../../{{original}}" class="img-thumbnail">
+    {{/if}}
+    <br>
+    <br>
+    <h4>Description:</h4>
+    <p>{{description}}</p>
+    <br>
+    <h4>Keywords:</h4>
+    <p><strong>{{keywords}}</strong></p>
+</div>
+{{/each}}
