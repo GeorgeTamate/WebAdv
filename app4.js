@@ -8,8 +8,10 @@ var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
 var sqlite3 = require('sqlite3').verbose();
+var yamlConfig = require('node-yaml-config');
+var redisYml = yamlConfig.load('./redis.yml');
+var sqliteYml = yamlConfig.load('./sqlite.yml');
 var shortid = require('shortid');
-
 var multer  = require('multer');
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -20,6 +22,13 @@ var storage = multer.diskStorage({
     }
 });
 var upload = multer({ storage: storage });
+var redis = require('redis');
+
+// var client = redis.createClient(redisYml.port, redisYml.host); //creates a new client
+// redisClient.auth(redisYml.authKey);
+// client.on('connect', function() {
+//     console.log('connected');
+// });
 
 var allowedMethods = ['GET', 'POST', 'PUT'];
 
@@ -34,35 +43,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-// var sampledb = new sqlite3.Database('db/sample.db');
-// sampledb.serialize(function () {
-//     sampledb.run("CREATE TABLE if not exists user_info (info TEXT)");
-//     var stmt = sampledb.prepare("INSERT INTO user_info VALUES (?)");
-//     for (var i = 0; i < 10; i++) {
-//         stmt.run("Ipsum " + i);
-//     }
-//     stmt.finalize();
-
-//     sampledb.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
-//         console.log(row.id + ": " + row.info);
-//     });
-// });
-
-// sampledb.close();
-
-// //Perform SELECT Operation
-// sampledb.all("SELECT * from blah blah blah where this=" + that, function (err, rows) {
-//     //rows contain values while errors, well you can figure out.
-// });
-
-// //Perform INSERT operation.
-// sampledb.run("INSERT into table_name(col1,col2,col3) VALUES (val1,val2,val3)");
-
-// //Perform DELETE operation
-// sampledb.run("DELETE * from table_name where condition");
-
-// //Perform UPDATE operation
-// sampledb.run("UPDATE table_name where condition");
 
 // Handlebars
 
@@ -74,7 +54,7 @@ app.get('/example', function (req, res) {
 
 app.get('/movies', function (req, res) {
     console.log('/movies');
-    var db = new sqlite3.Database('db/movies.db');
+    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
     db.serialize(function () {
         db.all("SELECT * FROM movies", function (err, rows) {
             res.render('movies', { rows: rows });
@@ -85,7 +65,7 @@ app.get('/movies', function (req, res) {
 
 app.get('/movies/json', function (req, res) {
     console.log('/movies/json');
-    var db = new sqlite3.Database('db/movies.db');
+    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
     db.serialize(function () {
         db.all("SELECT * FROM movies", function (err, json) {
             json.forEach(function(element) {
@@ -99,7 +79,7 @@ app.get('/movies/json', function (req, res) {
 
 app.get('/movies/list', function (req, res) {
     console.log('/movies/list');
-    var db = new sqlite3.Database('db/movies.db');
+    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
     db.serialize(function () {
         db.all("SELECT * FROM movies", function (err, rows) {
             res.render('list', { rows: rows });
@@ -110,7 +90,7 @@ app.get('/movies/list', function (req, res) {
 
 app.get('/movies/list/json', function (req, res) {
     console.log('/movies/list/json');
-    var db = new sqlite3.Database('db/movies.db');
+    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
     db.serialize(function () {
         db.all("SELECT * FROM movies", function (err, json) {
             json.forEach(function(element) {
@@ -124,7 +104,7 @@ app.get('/movies/list/json', function (req, res) {
 
 app.get('/movies/details/:id', function (req, res) {
     console.log('/movies/details/' + req.param("id"));
-    var db = new sqlite3.Database('db/movies.db');
+    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
     db.all("SELECT * FROM movies WHERE id=?", req.param("id"), function (err, rows) {
         res.render('details', { rows: rows });
     });
@@ -232,7 +212,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
         });
     } else {
         // SQLite transaction
-        var db = new sqlite3.Database('db/movies.db');
+        var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
         db.serialize(function () {
             db.run("CREATE TABLE if not exists movies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, keywords TEXT, original TEXT, compressed TEXT, thumb1 TEXT, thumb2 TEXT, thumb3 TEXT)");
             var stmt = db.prepare("INSERT INTO movies (name, description, keywords, original) VALUES (?, ?, ?, ?)");
@@ -240,11 +220,11 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
             stmt.finalize();
         });
         db.close();
-        res.send('uploaded!');
+        //redisClient.set('george:uploadedImage', "uploads/" + req.file.filename);
+        res.redirect('/movies');
     }
 
 });
-
 
 
 
@@ -335,3 +315,35 @@ app.post('*', function (req, res) {
 app.listen(8085, function () {
     console.log('Example app listening on port 8085!');
 });
+
+
+
+// var sampledb = new sqlite3.Database('db/sample.db');
+// sampledb.serialize(function () {
+//     sampledb.run("CREATE TABLE if not exists user_info (info TEXT)");
+//     var stmt = sampledb.prepare("INSERT INTO user_info VALUES (?)");
+//     for (var i = 0; i < 10; i++) {
+//         stmt.run("Ipsum " + i);
+//     }
+//     stmt.finalize();
+
+//     sampledb.each("SELECT rowid AS id, info FROM user_info", function (err, row) {
+//         console.log(row.id + ": " + row.info);
+//     });
+// });
+
+// sampledb.close();
+
+// //Perform SELECT Operation
+// sampledb.all("SELECT * from blah blah blah where this=" + that, function (err, rows) {
+//     //rows contain values while errors, well you can figure out.
+// });
+
+// //Perform INSERT operation.
+// sampledb.run("INSERT into table_name(col1,col2,col3) VALUES (val1,val2,val3)");
+
+// //Perform DELETE operation
+// sampledb.run("DELETE * from table_name where condition");
+
+// //Perform UPDATE operation
+// sampledb.run("UPDATE table_name where condition");
