@@ -7,12 +7,15 @@ var exphbs  = require('express-handlebars');
 var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
-var sqlite3 = require('sqlite3').verbose();
+const MongoClient = require('mongodb').MongoClient;
+//var sqlite3 = require('sqlite3').verbose();
+//var sqliteYml = yamlConfig.load('./sqlite.yml');
 var yamlConfig = require('node-yaml-config');
 var redisYml = yamlConfig.load('./redis.yml');
-var sqliteYml = yamlConfig.load('./sqlite.yml');
+var mongoYml = yamlConfig.load('./mongo.yml');
 var shortid = require('shortid');
-var multer  = require('multer');
+var uuid = require('uuid-v4');
+var multer = require('multer');
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, __dirname + '/uploads/');
@@ -30,7 +33,11 @@ var redis = require('redis');
 //     console.log('connected');
 // });
 
+
+var port = 8085;
+var db;
 var allowedMethods = ['GET', 'POST', 'PUT'];
+var mongoCollection = mongoYml.collection;
 
 
 // Register `hbs.engine` with the Express app.
@@ -41,84 +48,90 @@ app.use(express.static(path.join(__dirname, 'generated')));
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 
+// LISTEN
+MongoClient.connect(mongoYml.url, (err, database) => {
+    if (err) return console.log(err);
+    db = database;
+    app.listen(port, function () {
+        console.log('Example app listening on port 8085!');
+    });
+});
 
 // Handlebars
 
 app.get('/example', function (req, res) {
     console.log('Sample Shortid: ' + shortid.generate());
-    //PPBqWA9
     res.render('home');
+});
+
+app.get('/remove', function (req, res) {
+    db.collection(mongoCollection, function (err, collection) {
+        collection.remove();
+    });
+    res.send('Database Collection Removed!');
 });
 
 app.get('/movies', function (req, res) {
     console.log('/movies');
-    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-    db.serialize(function () {
-        db.all("SELECT * FROM movies", function (err, rows) {
-            res.render('movies', { rows: rows });
-        });
+    db.collection(mongoCollection).find().toArray((err, result) => {
+        if (err) return console.log(err);
+        res.render('movies', { rows: result });
     });
-    db.close();
 });
 
 app.get('/movies/json', function (req, res) {
     console.log('/movies/json');
-    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-    db.serialize(function () {
-        db.all("SELECT * FROM movies", function (err, json) {
-            json.forEach(function(element) {
-                element.keywords = element.keywords.split(',');
-            }, this);
-            res.send(json);
-        });
+    db.collection(mongoCollection).find().toArray((err, json) => {
+        if (err) return console.log(err);
+        json.forEach(function (element) {
+            element.keywords = element.keywords.split(',');
+        }, this);
+        res.send(json);
     });
-    db.close();
 });
 
 app.get('/movies/list', function (req, res) {
     console.log('/movies/list');
-    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-    db.serialize(function () {
-        db.all("SELECT * FROM movies", function (err, rows) {
-            res.render('list', { rows: rows });
-        });
+    db.collection(mongoCollection).find().toArray((err, result) => {
+        if (err) return console.log(err);
+        res.render('list', { rows: result });
     });
-    db.close();
 });
 
 app.get('/movies/list/json', function (req, res) {
     console.log('/movies/list/json');
-    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-    db.serialize(function () {
-        db.all("SELECT * FROM movies", function (err, json) {
-            json.forEach(function(element) {
-                element.keywords = element.keywords.split(',');
-            }, this);
-            res.send(json);
-        });
+    db.collection(mongoCollection).find().toArray((err, json) => {
+        if (err) return console.log(err);
+        json.forEach(function (element) {
+            element.keywords = element.keywords.split(',');
+        }, this);
+        res.send(json);
     });
-    db.close();
 });
 
 app.get('/movies/details/:id', function (req, res) {
     console.log('/movies/details/' + req.param("id"));
-    var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-    db.all("SELECT * FROM movies WHERE id=?", req.param("id"), function (err, rows) {
-        res.render('details', { rows: rows });
+    db.collection(mongoCollection).find({ id: req.param("id") }).toArray((err, result) => {
+        if (err) return console.log(err);
+        res.render('details', { rows: result });
     });
-    db.close();
 });
 
 app.get('/movies/create', function (req, res) {
     res.render('create', {
         showTitle: true,
         helpers: {
-                namePlaceholder: function () { return 'Enter name'; },
-                descriptionPlaceholder: function () { return 'Enter description'; },
-                keywordsPlaceholder: function () { return 'Enter keywords'; }
-            }
+            namePlaceholder: function () { return 'Enter name'; },
+            descriptionPlaceholder: function () { return 'Enter description'; },
+            keywordsPlaceholder: function () { return 'Enter keywords'; }
+        }
     });
 });
 
@@ -149,7 +162,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
         "error": '',
         "message": ''
     };
-    
+
     console.log();
     console.log('NAME: ' + name.text);
     console.log('DESCRIPTION: ' + description.text);
@@ -194,6 +207,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
 
     // Response
     if (isAlert) {
+
         res.render('create', {
             showTitle: true,
             helpers: {
@@ -210,16 +224,23 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
                 pictureAlertMsg: function () { return picture.message; }
             }
         });
+
     } else {
-        // SQLite transaction
-        var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
-        db.serialize(function () {
-            db.run("CREATE TABLE if not exists movies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, keywords TEXT, original TEXT, compressed TEXT, thumb1 TEXT, thumb2 TEXT, thumb3 TEXT)");
-            var stmt = db.prepare("INSERT INTO movies (name, description, keywords, original) VALUES (?, ?, ?, ?)");
-            stmt.run(req.body.name, req.body.description, req.body.keywords, req.file.filename);
-            stmt.finalize();
+
+        var movie = {
+            id: uuid(),
+            name: req.body.name,
+            description: req.body.description,
+            keywords: req.body.keywords,
+            original: req.file.filename
+        };
+
+        // NoSQL transaction
+        db.collection(mongoCollection).save(movie, (err, result) => {
+            if (err) return console.log(err);
+            console.log('saved to database');
         });
-        db.close();
+
         //redisClient.set('george:uploadedImage', "uploads/" + req.file.filename);
         res.redirect('/movies');
     }
@@ -311,11 +332,6 @@ app.post('*', function (req, res) {
     res.send('No resource found for this path.');
 });
 
-// LISTEN
-app.listen(8085, function () {
-    console.log('Example app listening on port 8085!');
-});
-
 
 
 // var sampledb = new sqlite3.Database('db/sample.db');
@@ -347,3 +363,41 @@ app.listen(8085, function () {
 
 // //Perform UPDATE operation
 // sampledb.run("UPDATE table_name where condition");
+
+//////////
+
+
+// // SQLite transaction
+// var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
+// db.serialize(function () {
+//     db.run("CREATE TABLE if not exists movies (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, keywords TEXT, original TEXT, compressed TEXT, thumb1 TEXT, thumb2 TEXT, thumb3 TEXT)");
+//     var stmt = db.prepare("INSERT INTO movies (name, description, keywords, original) VALUES (?, ?, ?, ?)");
+//     stmt.run(req.body.name, req.body.description, req.body.keywords, req.file.filename);
+//     stmt.finalize();
+// });
+// db.close();
+
+// var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
+// db.serialize(function () {
+//     db.all("SELECT * FROM movies", function (err, rows) {
+//         res.render('movies', { rows: rows });
+//     });
+// });
+// db.close();
+
+// var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
+// db.serialize(function () {
+//     db.all("SELECT * FROM movies", function (err, json) {
+//         json.forEach(function (element) {
+//             element.keywords = element.keywords.split(',');
+//         }, this);
+//         res.send(json);
+//     });
+// });
+// db.close();
+
+// var db = new sqlite3.Database(sqliteYml.path, sqlite3.OPEN_READWRITE);
+// db.all("SELECT * FROM movies WHERE id=?", req.param("id"), function (err, rows) {
+//     res.render('details', { rows: rows });
+// });
+// db.close();
