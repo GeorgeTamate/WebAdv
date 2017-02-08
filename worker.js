@@ -1,28 +1,26 @@
 var express = require('express');
 var app = express();
 var redis = require('redis');
-var sqlite3 = require('sqlite3');
+const MongoClient = require('mongodb').MongoClient;
 var yamlConfig = require('node-yaml-config');
+var mongoConfig = yamlConfig.load('./mongo.yml');
 var redisConfig = yamlConfig.load('./redis.yml');
-var sqliteConfig = yamlConfig.load('./sqlite.yml');
 var tinifyConfig = yamlConfig.load('./tinify.yml');
 var tinify = require('tinify');
-var sharp = require('sharp');
+var jimp = require('jimp');
 var redisClient = redis.createClient(redisConfig.port, redisConfig.host);
 redisClient.auth(redisConfig.authKey);
 var redisSubsClient = redis.createClient(redisConfig.port, redisConfig.host);
 redisSubsClient.auth(redisConfig.authKey);
-var db = new sqlite3.Database(sqliteConfig.path, sqlite3.OPEN_READWRITE);
 tinify.key = tinifyConfig.key;
 var uploadedImage = null;
 
-
-
 app.use(express.static(path.join(__dirname, 'uploads')));
-redisSubsClient.on('connect', function() {
+
+redisSubsClient.on('connect', function () {
     console.log('Redis Subscriber connected');
 });
-redisClient.on('connect', function() {
+redisClient.on('connect', function () {
     console.log('Redis Publisher connected');
 });
 redisSubsClient.config('set', 'notify-keyspace-events', 'KEA');
@@ -30,8 +28,8 @@ redisSubsClient.subscribe('__keyevent@0__:set', 'george:uploadedImage');
 
 
 
-redisSubsClient.on('message', function(channel, key) {
-    redisClient.get('george:uploadedImage', function(err, reply) {
+redisSubsClient.on('message', function (channel, key) {
+    redisClient.get('george:uploadedImage', function (err, reply) {
         if (err) {
             console.error('Error getting key from redis: ' + err);
         } else if (reply) {
@@ -40,62 +38,80 @@ redisSubsClient.on('message', function(channel, key) {
                 var fullPath = reply;
                 var fileName = reply.split('/');
                 fileName = fileName[2];
-                
-                var compressedFilePath = __dirname + "/generated/compressed_" + fileName;
-                var smallFilePath = __dirname + "/generated/small_" + fileName;
-                var mediumFilePath = __dirname + "/generated/medium_" + fileName;
-                var largeFilePath = __dirname + "/generated/large_" + fileName;
-                
-                tinify.fromFile(__dirname + '/uploads/' + fullPath).toFile(compressedFilePath, function(err) {
+                var compressedImagePath = __dirname + "/generated/compressed_" + fileName;
+                var smallImagePath = __dirname + "/generated/small_" + fileName;
+                var mediumImagePath = __dirname + "/generated/medium_" + fileName;
+                var largeImagePath = __dirname + "/generated/large_" + fileName;
+
+                tinify.fromFile(__dirname + '/uploads/' + fullPath).toFile(compressedImagePath, function (err) {
                     if (err) {
                         console.error('Error creating compressed image: ' + err);
                     } else {
-                        db.serialize(function() {
-                            var statement = db.prepare("UPDATE movies set compressed = (?) where original = (?)");
-                            statement.run("/compressed_" + fileName, fullPath);
-                            statement.finalize();
+                        MongoClient.connect(mongoConfig.url, function (err, db) {
+                            var moviesCollection = db.collection(mongoConfig.collection).update(
+                                { image: fullPath },
+                                { $set: { compressedThumbnail: "/compressed_" + fileName } });
+                            db.close();
                         });
-                        console.log('Compressed image created');
+                        console.log('Compressed image created.');
                     }
                 });
-                sharp(__dirname + '/uploads/' + fullPath).resize(80, 120, { centerSampling: true }).toFile(smallFilePath, function(err, info) {
-                    if (err) {
-                        console.error('Error creating small thumbnail: ' + err);
-                    } else {
-                        db.serialize(function() {
-                            var statement = db.prepare("UPDATE movies set thumb1 = (?) where original = (?)");
-                            statement.run("/small_" + fileName, fullPath);
-                            statement.finalize();
-                        });
-                        console.log('Small thumbnail created');
-                    }
+
+                jimp.read(__dirname + '/uploads/' + fullPath).then(function (lenna) {
+                    lenna.resize(80, 120)        // resize
+                        .quality(60)                 // set quality
+                        .write(smallImagePath);      // save
+
+                    MongoClient.connect(mongoConfig.url, function (err, db) {
+                        var moviesCollection = db.collection(mongoConfig.collection).update(
+                            { image: fullPath },
+                            { $set: { smallThumbnail: "/small_" + fileName } });
+                        db.close();
+                    });
+                    console.log('Small thumbnail image created.');
+
+                }).catch(function (err) {
+                    console.error('Error creating small thumbnail image: ' + err);
                 });
-                sharp(__dirname + '/uploads/' + fullPath).resize(110, 170, { centerSampling: true }).toFile(mediumFilePath, function(err, info) {
-                    if (err) {
-                        console.error('Error creating medium thumbnail: ' + err);
-                    } else {
-                        db.serialize(function() {
-                            var statement = db.prepare("UPDATE movies set thumb2 = (?) where original = (?)");
-                            statement.run("/medium_" + fileName, fullPath);
-                            statement.finalize();
-                        });
-                        console.log('Medium thumbnail created');
-                    }
+
+
+                jimp.read(__dirname + '/uploads/' + fullPath).then(function (lenna) {
+                    lenna.resize(110, 170)        // resize
+                        .quality(60)                  // set quality
+                        .write(mediumImagePath);      // save
+
+                    MongoClient.connect(mongoConfig.url, function (err, db) {
+                        var moviesCollection = db.collection(mongoConfig.collection).update(
+                            { image: fullPath },
+                            { $set: { mediumThumbnail: "/medium_" + fileName } });
+                        db.close();
+                    });
+                    console.log('Medium thumbnail image created.');
+
+                }).catch(function (err) {
+                    console.error('Error creating medium thumbnail image: ' + err);
                 });
-                sharp(__dirname + '/uploads/' + fullPath).resize(150, 210, { centerSampling: true }).toFile(largeFilePath, function(err, info) {
-                    if (err) {
-                        console.error('Error creating large thumbnail: ' + err);
-                    } else {
-                        db.serialize(function() {
-                            var statement = db.prepare("UPDATE movies set thumb3 = (?) where original = (?)");
-                            statement.run("/large_" + fileName, fullPath);
-                            statement.finalize();
-                        });
-                        console.log('Large thumbnail created');
-                    }
+
+                jimp.read(__dirname + '/uploads/' + fullPath).then(function (lenna) {
+                    lenna.resize(110, 170)       // resize
+                        .quality(60)                 // set quality
+                        .write(largeImagePath);      // save
+
+                    MongoClient.connect(mongoConfig.url, function (err, db) {
+                        var moviesCollection = db.collection(mongoConfig.collection).update(
+                            { image: fullPath },
+                            { $set: { largeThumbnail: "/large_" + fileName } });
+                        db.close();
+                    });
+                    console.log('Large thumbnail image created.');
+
+                }).catch(function (err) {
+                    console.error('Error creating large thumbnail image: ' + err);
                 });
+
+
             } catch (err) {
-                console.error('Error creating thumbnails: ' + err);
+                console.error('Error creating thumbnails images: ' + err);
             }
         }
     });
