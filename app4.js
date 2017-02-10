@@ -27,9 +27,9 @@ var storage = multer.diskStorage({
 var upload = multer({ storage: storage });
 var redis = require('redis');
 
-// var client = redis.createClient(redisYml.port, redisYml.host); //creates a new client
+// var redisClient = redis.createClient(redisYml.port, redisYml.host); //creates a new client
 // redisClient.auth(redisYml.authKey);
-// client.on('connect', function() {
+// redisClient.on('connect', function() {
 //     console.log('connected');
 // });
 
