@@ -2,5 +2,5 @@ default:
     host: 45.55.77.201
     port: 6379
     authKey: g5X33nFB
-    # host: '127.0.0.1'
+    # host: '192.168.15.16'
     # port: 6379
