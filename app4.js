@@ -23,9 +23,20 @@ var storage = multer.diskStorage({
     }
 });
 var upload = multer({ storage: storage });
-var redis = require('redis');
 
-var redisClient = redis.createClient(redisYml.port, redisYml.host); //creates a new client
+var ionicStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, __dirname + '/img/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+});
+var ionicUpload = multer({ storage: ionicStorage });
+
+// REDIS
+var redis = require('redis');
+var redisClient = redis.createClient(redisYml.port, redisYml.host);
 redisClient.auth(redisYml.authKey);
 redisClient.on('connect', function () {
     console.log('connected');
@@ -38,12 +49,12 @@ var allowedMethods = ['GET', 'POST', 'PUT'];
 var mongoCollection = mongoYml.collection;
 
 
-// Register `hbs.engine` with the Express app.
 app.engine('handlebars', exphbs({ defaultLayout: 'main' }));
 app.set('view engine', 'handlebars');
 
 app.use(express.static(path.join(__dirname, 'generated')));
 app.use(express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'img')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(function (req, res, next) {
@@ -75,6 +86,28 @@ app.get('/remove', function (req, res) {
     });
     res.send('Database Collection Removed!');
 });
+
+// IMG
+
+app.get('/image', function (req, res) {
+	res.statusCode = 404;
+    res.send('/image - No image data with GET Method.');
+});
+
+app.post('/image', ionicUpload.single('image'), function (req, res, next) {
+    if (req.headers['content-type'].includes("multipart")) {
+        res.statusCode = 200;
+        res.send('/image - Success!!');
+    } else if (!req.file) {
+        res.statusCode = 400;
+        res.send('/image - No Content Type defined.');
+    } else {
+        res.statusCode = 400;
+        res.send('/image - Content Type is not multipart/form-data.');
+    }
+});
+
+//Movies
 
 app.get('/movies', function (req, res) {
     console.log('/movies');
@@ -116,14 +149,11 @@ app.get('/movies/list/json', function (req, res) {
     });
 });
 
-app.get('/movies/details', function (req, res) {
-    console.log('/movies/details');
-    res.statusCode = 404;
-    res.type('html');
-    res.render('404');
-});
-
 app.get('/movies/details/:id', function (req, res) {
+    if (!req.param("id")) {
+        res.statusCode = 404;
+        res.send();
+    }
     console.log('/movies/details/' + req.param("id"));
     db.collection(mongoCollection).find({ id: req.param("id") }).toArray((err, result) => {
         if (err) return console.log(err);
@@ -262,7 +292,6 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
     }
 
 });
-
 
 
 // Assig2,3 //////////////////////////////////////////////////////
