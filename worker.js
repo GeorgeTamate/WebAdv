@@ -51,7 +51,7 @@ redisSubsClient.on('message', function (channel, key) {
                     } else {
                         MongoClient.connect(mongoConfig.url, function (err, db) {
                             var moviesCollection = db.collection(mongoConfig.collection).update(
-                                { original: fileName },
+                                { image: fileName },
                                 { $set: { compressed: "compressed_" + fileName } });
                             db.close();
                         });
@@ -66,7 +66,7 @@ redisSubsClient.on('message', function (channel, key) {
 
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
-                            { original: fileName },
+                            { image: fileName },
                             { $set: { thumb1: "small_" + fileName } });
                         db.close();
                     });
@@ -84,7 +84,7 @@ redisSubsClient.on('message', function (channel, key) {
 
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
-                            { original: fileName },
+                            { image: fileName },
                             { $set: { thumb2: "medium_" + fileName } });
                         db.close();
                     });
@@ -101,7 +101,7 @@ redisSubsClient.on('message', function (channel, key) {
 
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
-                            { original: fileName },
+                            { image: fileName },
                             { $set: { thumb3: "large_" + fileName } });
                         db.close();
                     });
