@@ -3,7 +3,7 @@
 // server's response.
 
 var express = require('express');
-var exphbs  = require('express-handlebars');
+var exphbs = require('express-handlebars');
 var app = express();
 var path = require('path');
 var bodyParser = require('body-parser');
@@ -27,7 +27,7 @@ var redis = require('redis');
 
 var redisClient = redis.createClient(redisYml.port, redisYml.host); //creates a new client
 redisClient.auth(redisYml.authKey);
-redisClient.on('connect', function() {
+redisClient.on('connect', function () {
     console.log('connected');
 });
 
@@ -39,7 +39,7 @@ var mongoCollection = mongoYml.collection;
 
 
 // Register `hbs.engine` with the Express app.
-app.engine('handlebars', exphbs({defaultLayout: 'main'}));
+app.engine('handlebars', exphbs({ defaultLayout: 'main' }));
 app.set('view engine', 'handlebars');
 
 app.use(express.static(path.join(__dirname, 'generated')));
@@ -127,11 +127,19 @@ app.get('/movies/details/:id', function (req, res) {
     console.log('/movies/details/' + req.param("id"));
     db.collection(mongoCollection).find({ id: req.param("id") }).toArray((err, result) => {
         if (err) return console.log(err);
-        res.render('details', { rows: result });
+        if (result == '') {
+            res.statusCode = 404;
+            res.render('404');
+        } else {
+            console.log('details success: ' + result);
+            res.render('details', { rows: result });
+        }
+
     });
 });
 
 app.get('/movies/create', function (req, res) {
+    res.statusCode = 200;
     res.render('create', {
         showTitle: true,
         helpers: {
@@ -214,7 +222,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
 
     // Response
     if (isAlert) {
-
+        res.statusCode = 200;
         res.render('create', {
             showTitle: true,
             helpers: {
@@ -239,7 +247,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
             name: req.body.name,
             description: req.body.description,
             keywords: req.body.keywords,
-            original: req.file.filename
+            image: req.file.filename
         };
 
         // NoSQL transaction
@@ -249,6 +257,7 @@ app.post('/movies/create', upload.single('picture'), function (req, res) {
         });
 
         redisClient.set('george:uploadedImage', "uploads/" + req.file.filename);
+        res.statusCode = 200;
         res.redirect('/movies');
     }
 
