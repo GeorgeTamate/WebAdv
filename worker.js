@@ -52,7 +52,7 @@ redisSubsClient.on('message', function (channel, key) {
                         MongoClient.connect(mongoConfig.url, function (err, db) {
                             var moviesCollection = db.collection(mongoConfig.collection).update(
                                 { original: fileName },
-                                { $set: { compressedThumbnail: "/compressed_" + fileName } });
+                                { $set: { compressed: "compressed_" + fileName } });
                             db.close();
                         });
                         console.log('Compressed image created.');
@@ -67,7 +67,7 @@ redisSubsClient.on('message', function (channel, key) {
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
                             { original: fileName },
-                            { $set: { smallThumbnail: "/small_" + fileName } });
+                            { $set: { thumb1: "small_" + fileName } });
                         db.close();
                     });
                     console.log('Small thumbnail image created.');
@@ -85,7 +85,7 @@ redisSubsClient.on('message', function (channel, key) {
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
                             { original: fileName },
-                            { $set: { mediumThumbnail: "/medium_" + fileName } });
+                            { $set: { thumb2: "medium_" + fileName } });
                         db.close();
                     });
                     console.log('Medium thumbnail image created.');
@@ -102,7 +102,7 @@ redisSubsClient.on('message', function (channel, key) {
                     MongoClient.connect(mongoConfig.url, function (err, db) {
                         var moviesCollection = db.collection(mongoConfig.collection).update(
                             { original: fileName },
-                            { $set: { largeThumbnail: "/large_" + fileName } });
+                            { $set: { thumb3: "large_" + fileName } });
                         db.close();
                     });
                     console.log('Large thumbnail image created.');
