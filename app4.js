@@ -26,7 +26,7 @@ var upload = multer({ storage: storage });
 
 var ionicStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, __dirname + '/img/');
+        cb(null, __dirname + '/public/img/');
     },
     filename: function (req, file, cb) {
         cb(null, file.originalname);
@@ -54,7 +54,7 @@ app.set('view engine', 'handlebars');
 
 app.use(express.static(path.join(__dirname, 'generated')));
 app.use(express.static(path.join(__dirname, 'uploads')));
-app.use(express.static(path.join(__dirname, 'img')));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(function (req, res, next) {
@@ -90,7 +90,7 @@ app.get('/remove', function (req, res) {
 // IMG
 
 app.get('/image', function (req, res) {
-	res.statusCode = 404;
+    res.statusCode = 404;
     res.send('/image - No image data with GET Method.');
 });
 
@@ -149,6 +149,11 @@ app.get('/movies/list/json', function (req, res) {
     });
 });
 
+app.get('/movies/details', function (req, res) {
+    res.statusCode = 404;
+    res.send();
+});
+
 app.get('/movies/details/:id', function (req, res) {
     if (!req.param("id")) {
         res.statusCode = 404;
@@ -164,7 +169,6 @@ app.get('/movies/details/:id', function (req, res) {
             console.log('details success: ' + result);
             res.render('details', { rows: result });
         }
-
     });
 });
 
@@ -180,7 +184,7 @@ app.get('/movies/create', function (req, res) {
     });
 });
 
-app.post('/movies/create', upload.single('picture'), function (req, res) {
+app.post('/movies/create', upload.single('image'), function (req, res) {
     var isAlert = false;
     var alertMsg = '*It is required to fill this field in order to submit.';
     var fileAlertMsg = '*It is required to upload an image file.';
