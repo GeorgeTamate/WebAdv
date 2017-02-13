@@ -149,22 +149,23 @@ app.get('/movies/list/json', function (req, res) {
     });
 });
 
+app.get('/movies/id', function (req, res) {
+    res.statusCode = 404;
+    res.send('details - ID not defined');
+});
+
 app.get('/movies/details', function (req, res) {
     res.statusCode = 404;
-    res.send();
+    res.send('details - ID not defined');
 });
 
 app.get('/movies/details/:id', function (req, res) {
-    if (!req.param("id")) {
-        res.statusCode = 404;
-        res.send();
-    }
     console.log('/movies/details/' + req.param("id"));
     db.collection(mongoCollection).find({ id: req.param("id") }).toArray((err, result) => {
         if (err) return console.log(err);
         if (result == '') {
             res.statusCode = 404;
-            res.render('404');
+            res.render('404: Movie not found.');
         } else {
             console.log('details success: ' + result);
             res.render('details', { rows: result });
